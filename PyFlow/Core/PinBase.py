@@ -117,13 +117,7 @@ class PinBase(IPin):
         self._structure = StructureType.Single
         self._currStructure = self._structure
         self._isAny = False
-        self._isArray = False
-        self._isDict = False
-        self._alwaysList = False
-        self._alwaysDict = False
-        self._alwaysSingle = False
         self._defaultSupportedDataTypes = self._supportedDataTypes = self.supportedDataTypes()
-        self.canChange = False
         self._isDictElement = False
         self.hidden = False
 
@@ -308,19 +302,10 @@ class PinBase(IPin):
         :type bIsArray: bool
         """
         bIsArray = bool(bIsArray)
-        if self._isArray == bIsArray:
+        if self.structureType == StructureType.Array:
             return
 
-        self._isArray = bIsArray
-        if bIsArray:
-            if self.isDict():
-                self.setAsDict(False)
-            # list pins supports only lists by default
-            self.enableOptions(PinOptions.SupportsOnlyArrays)
-            self._currStructure = StructureType.Array
-            self._isDict = False
-        else:
-            self._currStructure = self._structure
+        self.changeStructure(StructureType.Array)
         self._data = self.defaultValue()
         self.containerTypeChanged.send()
 
@@ -331,20 +316,10 @@ class PinBase(IPin):
         :type bIsArray: bool
         """
         bIsDict = bool(bIsDict)
-        if self._isDict == bIsDict:
+        if self.structureType == StructureType.Dict:
             return
 
-        self._isDict = bIsDict
-        if bIsDict:
-            if self.isArray():
-                self.setAsArray(False)
-            # list pins supports only lists by default
-            self.enableOptions(PinOptions.SupportsOnlyArrays)
-            self._currStructure = StructureType.Dict
-            self._isArray = False
-        else:
-            self._currStructure = self._structure
-            self._keyType = None
+        self.changeStructure(StructureType.Dict)
         self._data = self.defaultValue()
         self.containerTypeChanged.send()
 
@@ -353,14 +328,14 @@ class PinBase(IPin):
 
         :rtype: bool
         """
-        return self._isArray
+        return self.structureType == StructureType.Array
 
     def isDict(self):
         """Returns whether this pin is dict or not
 
         :rtype: bool
         """
-        return self._isDict
+        return self.structureType == StructureType.Dict
 
     def setWrapper(self, wrapper):
         """Sets ui wrapper instance
@@ -391,9 +366,6 @@ class PinBase(IPin):
                 self.disableOptions(opt)
 
         self.changeStructure(jsonData["structure"])
-        self._alwaysList = jsonData['alwaysList']
-        self._alwaysSingle = jsonData['alwaysSingle']
-        self._alwaysDict = jsonData['alwaysDict']
 
         try:
             self.setData(json.loads(jsonData['value'], cls=self.jsonDecoderClass()))
@@ -434,10 +406,7 @@ class PinBase(IPin):
             'linkedTo': list(self.linkedTo),
             'pinIndex': self.pinIndex,
             'options': [i.value for i in PinOptions if self.optionEnabled(i)],
-            'structure': int(self._currStructure),
-            'alwaysList': self._alwaysList,
-            'alwaysSingle': self._alwaysSingle,
-            'alwaysDict': self._alwaysDict
+            'structure': int(self._currStructure)
         }
 
         # Wrapper class can subscribe to this signal and return
@@ -487,9 +456,6 @@ class PinBase(IPin):
         :rtype: str
         """
         return self.owningNode().name + '_' + self.name
-
-    def allowedDataTypes(self, checked=[], dataTypes=[], selfCheck=True, defaults=False):
-        return list(self.supportedDataTypes())
 
     def checkFree(self, checked=[], selfCheck=True):
         return False
@@ -675,40 +641,20 @@ class PinBase(IPin):
         :type other: :class:`~PyFlow.Core.PinBase.PinBase`
         """
         if other.structureType != self.structureType:
-            if self.optionEnabled(PinOptions.ChangeTypeOnConnection) or self.structureType == StructureType.Multi:
+            if self.optionEnabled(PinOptions.ChangeTypeOnConnection):
                 self.changeStructure(other._currStructure)
                 self.onPinConnected.send(other)
 
-    def getCurrentStructure(self):
-        """Returns this pin structure type
-
-        :rtype: :class:`~PyFlow.Core.Common.StructureType`
-        """
-        if self.structureType == StructureType.Multi:
-            if self._alwaysSingle:
-                return StructureType.Single
-            elif self._alwaysList:
-                return StructureType.Array
-            elif self._alwaysDict:
-                return StructureType.Dict
-            else:
-                return self.structureType
-        else:
-            return self.structureType
-
-    def changeStructure(self, newStruct, init=False):
+    def changeStructure(self, newStruct):
         """Changes this pin structure type
 
         :param newStruct: Target structure
         :type newStruct: :class:`~PyFlow.Core.Common.StructureType`
-        :param init: **docs goes here**
-        :type init: bool
         """
-        free = self.canChangeStructure(newStruct, [], init=init)
-        if free:
-            self.updateConstrainedPins(set(), newStruct, init, connecting=True)
+        free = self.canChangeStructure(newStruct, [])
+        # change self structure and all constrained any pins
 
-    def canChangeStructure(self, newStruct, checked=[], selfCheck=True, init=False):
+    def canChangeStructure(self, newStruct, checked=[], selfCheck=True):
         """Recursive function to determine if pin can change its structure
 
         :param newStruct: New structure we want to apply
@@ -722,87 +668,7 @@ class PinBase(IPin):
         :returns: True if pin can change structure to newStruct
         :rtype: bool
         """
-        if not init and (self._alwaysList or self._alwaysSingle or self._alwaysDict):
-            return False
-        if self.structConstraint is None or self.structureType == StructureType.Multi:
-            return True
-        elif self.structureType != StructureType.Multi:
-            return False
-        else:
-            con = []
-            if selfCheck:
-                free = not self.hasConnections()
-                if not free:
-                    for c in getConnectedPins(self):
-                        if c not in checked:
-                            con.append(c)
-            else:
-                free = True
-                checked.append(self)
-            free = True
-            if selfCheck:
-                def testfree():
-                    free = False
-                    for pin in getConnectedPins(self):
-                        if pin._structure == StructureType.Multi:
-                            free = True
-                        else:
-                            free = False
-                            break
-                    return free
-                if any([self._currStructure == StructureType.Single and newStruct == StructureType.Array and not self.optionEnabled(PinOptions.ArraySupported) and self.hasConnections(),
-                        self._currStructure == StructureType.Single and newStruct == StructureType.Dict and not self.optionEnabled(PinOptions.DictSupported) and self.hasConnections(),
-                        self._currStructure == StructureType.Array and newStruct == StructureType.Single and self.optionEnabled(PinOptions.SupportsOnlyArrays) and self.hasConnections(),
-                        self._currStructure == StructureType.Dict and newStruct == StructureType.Single and self.optionEnabled(PinOptions.SupportsOnlyArrays) and self.hasConnections(),
-                        self._currStructure == StructureType.Array and newStruct == StructureType.Dict and self.hasConnections(),
-                        self._currStructure == StructureType.Dict and newStruct == StructureType.Array and self.hasConnections()]):
-                    free = testfree()
-            if free:
-                for port in self.owningNode().structConstraints[self.structConstraint] + con:
-                    if port not in checked:
-                        checked.append(port)
-                        free = port.canChangeStructure(newStruct, checked, True, init=init)
-                        if not free:
-                            break
-            return free
-
-    def updateConstrainedPins(self, traversed, newStruct, init=False, connecting=False):
-        nodePins = set()
-        if self.structConstraint is not None:
-            nodePins = set(self.owningNode().structConstraints[self.structConstraint])
-        else:
-            nodePins = set([self])
-        for connectedPin in getConnectedPins(self):
-            if connectedPin.structureType == StructureType.Multi:
-                if connectedPin.canChangeStructure(self._currStructure, init=init):
-                    nodePins.add(connectedPin)
-        for neighbor in nodePins:
-            if neighbor not in traversed:
-                neighbor.setAsArray(newStruct == StructureType.Array)
-                neighbor.setAsDict(newStruct == StructureType.Dict)
-                if connecting:
-                    if init:
-                        neighbor._alwaysList = newStruct == StructureType.Array
-                        neighbor._alwaysSingle = newStruct == StructureType.Single
-                        neighbor._alwaysDict = newStruct == StructureType.Dict
-                    neighbor._currStructure = newStruct
-                    neighbor.disableOptions(PinOptions.ArraySupported)
-                    neighbor.disableOptions(PinOptions.DictSupported)
-                    if newStruct == StructureType.Array:
-                        neighbor.enableOptions(PinOptions.ArraySupported)
-                    elif newStruct == StructureType.Dict:
-                        neighbor.enableOptions(PinOptions.DictSupported)   
-                    elif newStruct == StructureType.Multi:
-                        neighbor.enableOptions(PinOptions.ArraySupported)
-                        neighbor.enableOptions(PinOptions.DictSupported)
-                    elif newStruct == StructureType.Single:
-                        neighbor.disableOptions(PinOptions.SupportsOnlyArrays)
-                else:
-                    neighbor._currStructure = neighbor._structure
-                    neighbor._data = neighbor.defaultValue()
-                traversed.add(neighbor)
-                neighbor.setData(neighbor.defaultValue())
-                neighbor.updateConstrainedPins(traversed, newStruct, init, connecting=connecting)
+        return False
 
     def pinConnected(self, other):
         push(self)
@@ -813,38 +679,10 @@ class PinBase(IPin):
         self.onPinDisconnected.send(other)
         push(other)
 
-    def canChangeTypeOnConnection(self, checked=[], can=True, extraPins=[], selfCheck=True):
+    def canChangeTypeOnConnection(self):
         """Recursive function to determine if pin can change its dataType
-
-        :param checked: Already visited pins, defaults to []
-        :type checked: list, optional
-        :param can: Variable Updated during iteration, defaults to True
-        :type can: bool, optional
-        :param extraPins: extra pins, non constrained or connected to this pin but that want to check also, defaults to []
-        :type extraPins: list, optional
-        :param selfCheck: Define if check pin itself for connected pins, defaults to True
-        :type selfCheck: bool, optional
-        :returns: True if pin can becabe other dataType
-        :rtype: bool
         """
-        if not self.optionEnabled(PinOptions.ChangeTypeOnConnection):
-            return False
-        con = []
-        neis = []
-        if selfCheck:
-            if self.hasConnections():
-                for c in getConnectedPins(self):
-                    if c not in checked:
-                        con.append(c)
-        else:
-            checked.append(self)
-        if self.constraint:
-            neis = self.owningNode().constraints[self.constraint]
-        for port in neis + con + extraPins:
-            if port not in checked and can:
-                checked.append(port)
-                can = port.canChangeTypeOnConnection(checked, can, selfCheck=True)
-        return can
+        return False
 
     def getDictElementNode(self, checked=[], node=None):
         """Get the connected :py:class:`PyFlow.Packages.PyFlowBase.Nodes.makeDictElement.makeDictElement` to this pin recursively
@@ -865,7 +703,7 @@ class PinBase(IPin):
         if self.constraint:
             neis = self.owningNode().constraints[self.constraint]
         for port in con + neis:
-            if port not in checked and node == None:
+            if port not in checked and node is None:
                 checked.append(port)
                 node = port.getDictElementNode(checked, node)
         return node
@@ -890,7 +728,7 @@ class PinBase(IPin):
         if self.constraint:
             neis = self.owningNode().constraints[self.constraint]
         for port in con + neis:
-            if port not in checked and node == None:
+            if port not in checked and node is None:
                 checked.append(port)
                 node = port.getDictNode(checked, node)
         return node

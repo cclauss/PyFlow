@@ -22,7 +22,7 @@ class colorRamp(NodeBase):
     def __init__(self, name):
         super(colorRamp, self).__init__(name)
         self.bCacheEnabled = False
-        self.input = self.createInputPin('input', 'FloatPin', structure=StructureType.Multi)
+        self.input = self.createInputPin('input', 'FloatPin', structure=StructureType.Single)
         self.input.enableOptions(PinOptions.AlwaysPushDirty)
         self.output = self.createOutputPin('result', 'FloatPin', structure=StructureType.Array)
         self.output.enableOptions(PinOptions.AlwaysPushDirty)
@@ -35,7 +35,7 @@ class colorRamp(NodeBase):
         helper = NodePinsSuggestionsHelper()
         helper.addInputDataType('FloatPin')
         helper.addOutputDataType('FloatPin')
-        helper.addInputStruct(StructureType.Multi)
+        helper.addInputStruct(StructureType.Single)
         helper.addOutputStruct(StructureType.Array)
         return helper
 

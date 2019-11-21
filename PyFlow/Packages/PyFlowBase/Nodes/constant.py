@@ -20,11 +20,12 @@ from PyFlow import findPinClassByType, getAllPinClasses
 from PyFlow import CreateRawPin
 from copy import copy
 
+
 class constant(NodeBase):
     def __init__(self, name):
         super(constant, self).__init__(name)
-        self.input = self.createInputPin("in", 'AnyPin', defaultValue=0.0, structure=StructureType.Multi, constraint="1", structConstraint="1")
-        self.output = self.createOutputPin("out", 'AnyPin', defaultValue=0.0, structure=StructureType.Multi, constraint="1", structConstraint="1")
+        self.input = self.createInputPin("in", 'AnyPin', defaultValue=0.0, structure=StructureType.Single, constraint="1", structConstraint="1")
+        self.output = self.createOutputPin("out", 'AnyPin', defaultValue=0.0, structure=StructureType.Single, constraint="1", structConstraint="1")
         self.input.disableOptions(PinOptions.ChangeTypeOnConnection)
         self.output.disableOptions(PinOptions.ChangeTypeOnConnection)
         pinAffects(self.input, self.output)
@@ -40,8 +41,8 @@ class constant(NodeBase):
         helper = NodePinsSuggestionsHelper()
         helper.addInputDataType('AnyPin')
         helper.addOutputDataType('AnyPin')
-        helper.addInputStruct(StructureType.Multi)
-        helper.addOutputStruct(StructureType.Multi)
+        helper.addInputStruct(StructureType.Single)
+        helper.addOutputStruct(StructureType.Single)
         return helper
 
     @staticmethod

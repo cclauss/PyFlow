@@ -86,9 +86,6 @@ class UIPinBase(QGraphicsWidget):
             self.actionDisconnect.triggered.connect(self._rawPin.disconnectAll)
             self.actionResetValue = self.menu.addAction("Reset value")
             self.actionResetValue.triggered.connect(self.resetToDefault)
-            if self._rawPin._structure == StructureType.Multi:
-                self.menu.addAction("changeStructure").triggered.connect(
-                    self.selectStructure)
             self.actionWatchValue = self.menu.addAction("Watch")
             self.actionWatchValue.triggered.connect(self.toggleWatchValue)
             self._rawPin.dataBeenSet.connect(self.updateWatchWidgetValue)

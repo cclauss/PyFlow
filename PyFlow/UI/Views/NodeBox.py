@@ -197,18 +197,10 @@ class NodeBoxTreeWidget(QTreeWidget):
                         else:
                             self.suggestionsEnabled = True
                             if pinDirection == PinDirection.Output:
-                                if pinStructure != StructureType.Multi:
-                                    hasMultiPins = StructureType.Multi in fooInpStructs
-                                    if dataType in fooInpTypes and (pinStructure in fooInpStructs or hasMultiPins):
-                                        self.insertNode(nodeCategoryPath, name, foo.__doc__, libName)
-                                elif dataType in fooInpTypes:
+                                if dataType in fooInpTypes:
                                     self.insertNode(nodeCategoryPath, name, foo.__doc__, libName)
                             else:
-                                if pinStructure != StructureType.Multi:
-                                    hasMultiPins = StructureType.Multi in fooOutStructs
-                                    if dataType in fooOutTypes and (pinStructure in fooOutStructs or hasMultiPins):
-                                        self.insertNode(nodeCategoryPath, name, foo.__doc__, libName)
-                                elif dataType in fooOutTypes:
+                                if dataType in fooOutTypes:
                                     self.insertNode(nodeCategoryPath, name, foo.__doc__, libName)
 
             # class based nodes
@@ -228,20 +220,12 @@ class NodeBoxTreeWidget(QTreeWidget):
                     # filter by nodes input types
                     hints = node_class.pinTypeHints()
                     if pinDirection == PinDirection.Output:
-                        if pinStructure != StructureType.Multi:
-                            hasMultiPins = StructureType.Multi in hints.inputStructs
-                            if dataType in hints.inputTypes and (pinStructure in hints.inputStructs or hasMultiPins):
-                                self.insertNode(nodeCategoryPath, node_class.__name__, node_class.description())
-                        elif dataType in hints.inputTypes:
+                        if dataType in hints.inputTypes:
                             self.insertNode(nodeCategoryPath, node_class.__name__, node_class.description())
                     else:
                         # if pressed pin is input pin
                         # filter by nodes output types
-                        if pinStructure != StructureType.Multi:
-                            hasMultiPins = StructureType.Multi in hints.outputStructs
-                            if dataType in hints.outputTypes and (pinStructure in hints.outputStructs or hasMultiPins):
-                                self.insertNode(nodeCategoryPath, node_class.__name__, node_class.description())
-                        elif dataType in hints.outputTypes:
+                        if dataType in hints.outputTypes:
                             self.insertNode(nodeCategoryPath, node_class.__name__, node_class.description())
 
             # populate exported py nodes

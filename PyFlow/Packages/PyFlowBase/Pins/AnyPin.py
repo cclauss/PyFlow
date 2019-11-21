@@ -38,7 +38,7 @@ class AnyPin(PinBase):
     By default :py:attr:`PyFlow.Core.Common.PinOptions.ChangeTypeOnConnection` is enabled, and that means that it will change
     its internal dataType to the new dataType provided by connection or user Initialization. If disabled, pin will not allow changes.
 
-    Is important to define a bunch of allowedDataTypes on pin creation, this will restrict what pins can be connected and what no,
+    Is important to define a bunch of supportedDataTypes on pin creation, this will restrict what pins can be connected and what no,
     so even being a AnyPin, it can be defined to allow for example only ["FloatPin","IntPin"] so only those could be connected.
 
     :param self.singleInit: can be set to True, so once initialized, it will never be able to change dataType
@@ -68,7 +68,6 @@ class AnyPin(PinBase):
         self.checkForErrors = True
         self.enableOptions(PinOptions.ChangeTypeOnConnection)
         self._defaultSupportedDataTypes = self._supportedDataTypes = tuple([pin.__name__ for pin in getAllPinClasses() if pin.IsValuePin()])
-        self.canChange = True
         self._super = None
         self.prevDataType = None
         self._lastError2 = None
@@ -163,7 +162,7 @@ class AnyPin(PinBase):
         for neighbor in nodePins:
             if neighbor not in traversed:
                 if all([neighbor.activeDataType == "AnyPin",
-                        neighbor.canChangeTypeOnConnection([], neighbor.optionEnabled(PinOptions.ChangeTypeOnConnection), []),
+                        neighbor.canChangeTypeOnConnection(),
                         not neighbor.optionEnabled(PinOptions.AllowAny)]):
                     neighbor.setError("AnyPin Not Initialized")
                     neighbor.super = None
@@ -236,7 +235,7 @@ class AnyPin(PinBase):
         :param other: Pin that will be connected to this Pin.
         :type other: :py:class:`PyFlow.Core.PinBase.PinBase`
         """
-        if self.canChangeTypeOnConnection([], self.optionEnabled(PinOptions.ChangeTypeOnConnection), []):
+        if self.canChangeTypeOnConnection():
             dataType = other.dataType
             traverseConstrainedPins(self, lambda pin: self.updateOnConnectionCallback(pin, dataType, False, other))
         super(AnyPin, self).aboutToConnect(other)
@@ -263,7 +262,7 @@ class AnyPin(PinBase):
 
         This Function is called for all the connected Pins to the initial Pin calling it.
         Here we traverse all pins and call :py:func:`AnyPin.setType` for all of them.
-        We also intersect all the connected pins allowedDataTypes.
+        We also intersect all the connected pins supportedDataTypes.
         :param pin: Pin to perform operations on
         :type pin: :py:class:`AnyPin`
         :param dataType: New DataType to apply
@@ -279,25 +278,24 @@ class AnyPin(PinBase):
                 if not other:
                     return
                 else:
-                    if pin.dataType != "AnyPin" and pin.dataType in other.allowedDataTypes([], other._supportedDataTypes) and other.canChangeTypeOnConnection([], other.optionEnabled(PinOptions.ChangeTypeOnConnection), []):
+                    if pin.dataType != "AnyPin" and pin.dataType in other.supportedDataTypes([], other._supportedDataTypes) and other.canChangeTypeOnConnection():
                         dataType = pin.dataType
 
-            if any([dataType in pin.allowedDataTypes([], pin._supportedDataTypes),
+            if any([dataType in pin.supportedDataTypes(),
                     dataType == "AnyPin",
-                    (pin.checkFree([], False) and dataType in pin.allowedDataTypes([], pin._defaultSupportedDataTypes, defaults=True))]):
+                    (pin.checkFree([], False) and dataType in pin.supportedDataTypes())]):
                 a = pin.setType(dataType)
                 if a:
                     if other:
                         if pin.optionEnabled(PinOptions.ChangeTypeOnConnection):
-                            pin._supportedDataTypes = other.allowedDataTypes(
-                                [], other._supportedDataTypes)
+                            pin._supportedDataTypes = other.supportedDataTypes()
                     if dataType == "AnyPin":
                         if pin.optionEnabled(PinOptions.ChangeTypeOnConnection):
                             pin._supportedDataTypes = pin._defaultSupportedDataTypes
                             pin.supportedDataTypes = lambda: pin._supportedDataTypes
 
     def checkFree(self, checked=[], selfCheck=True):
-        """Recursive Function to find if all connected Pins are of type :py:class:`AnyPin` and canChange On connection,
+        """Recursive Function to find if all connected Pins are of type :py:class:`AnyPin` and can change On connection,
         so basically it checks if a Pin is free to change its dataType to another one
 
         :param checked: Already visited Pins, defaults to []
@@ -321,9 +319,6 @@ class AnyPin(PinBase):
             else:
                 free = True
                 checked.append(self)
-            canChange = self.canChangeTypeOnConnection(
-                [], self.optionEnabled(PinOptions.ChangeTypeOnConnection), [])
-            free = canChange
             for port in self.owningNode().constraints[self.constraint] + con:
                 if port not in checked:
                     checked.append(port)
@@ -332,47 +327,6 @@ class AnyPin(PinBase):
                     elif free:
                         free = port.checkFree(checked)
             return free
-
-    def allowedDataTypes(self, checked=[], dataTypes=[], selfCheck=True, defaults=False):
-        """Recursive Function to intersect allowedDatatypes of all connected pins.
-
-        :param checked: Already visited Pins, defaults to []
-        :type checked: list, optional
-        :param dataTypes: Intersected dataTypes, defaults to []
-        :type dataTypes: list, optional
-        :param selfCheck: Define if check Pin itself or no, this is useful when trying to override a connection that is in fact
-                        the only connection that make hole graphed nodes not be able to change Type, defaults to True
-        :type selfCheck: bool, optional
-        :param defaults: Define if we are intersecting current allowedDataTypes, or default (as in definition of node) allowedDataTypes, defaults to False
-        :type defaults: bool, optional
-        :returns: List containing all the intersected dataTypes
-        :rtype: list
-        """
-        if not self.optionEnabled(PinOptions.ChangeTypeOnConnection) and self.activeDataType == "AnyPin":
-            return self._defaultSupportedDataTypes
-        con = []
-        neis = []
-        if selfCheck:
-            if self.hasConnections():
-                for c in getConnectedPins(self):
-                    if c not in checked:
-                        con.append(c)
-        else:
-            checked.append(self)
-        if self.constraint:
-            neis = self.owningNode().constraints[self.constraint]
-        for port in neis + con:
-            if port not in checked:
-                checked.append(port)
-                if not defaults:
-                    dataTypes = list(set(dataTypes) & set(
-                        port._supportedDataTypes))
-                else:
-                    dataTypes = list(set(dataTypes) & set(
-                        port._defaultSupportedDataTypes))
-                dataTypes = port.allowedDataTypes(
-                    checked, dataTypes, selfCheck=True, defaults=defaults)
-        return dataTypes
 
     def initType(self, dataType, initializing=False):
         """Same as :py:func:`AnyPin.aboutToConnect` but instead of using another Pin using a dataType name
@@ -384,15 +338,12 @@ class AnyPin(PinBase):
         :returns: True if it can change to the asked dataType
         :rtype: bool
         """
-        if self.canChangeTypeOnConnection([], self.optionEnabled(PinOptions.ChangeTypeOnConnection), []):
-            traverseConstrainedPins(
-                self, lambda pin: self.updateOnConnectionCallback(pin, dataType, initializing))
-            self._lastError2 = self._lastError
-            self.updateError([], self.activeDataType ==
-                             "AnyPin" or self.prevDataType == "AnyPin")
-            self.owningNode().checkForErrors()
-            return True
-        return False
+        traverseConstrainedPins(self, lambda pin: self.updateOnConnectionCallback(pin, dataType, initializing))
+        self._lastError2 = self._lastError
+        self.updateError([], self.activeDataType == "AnyPin" or self.prevDataType == "AnyPin")
+        self.owningNode().checkForErrors()
+        self.supportedDataTypes = findPinClassByType(dataType).supportedDataTypes
+        return True
 
     def setType(self, dataType):
         """Here is where :py:class:`AnyPin` heredates all the properties from other defined dataTypes and act like those

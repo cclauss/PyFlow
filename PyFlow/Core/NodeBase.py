@@ -508,8 +508,6 @@ class NodeBase(INode):
             p.initAsArray(True)
         elif structure == StructureType.Dict:
             p.initAsDict(True)
-        elif structure == StructureType.Multi:
-            p.enableOptions(PinOptions.ArraySupported)
 
         if foo:
             p.onExecute.connect(foo, weak=False)
@@ -562,8 +560,6 @@ class NodeBase(INode):
             p.initAsArray(True)
         elif structure == StructureType.Dict:
             p.initAsDict(True)
-        elif structure == StructureType.Multi:
-            p.enableOptions(PinOptions.ArraySupported)
 
         if defaultValue is not None or dataType == "AnyPin":
             p.setDefaultValue(defaultValue)
@@ -840,9 +836,8 @@ class NodeBase(INode):
                 p.enableOptions(returnPinOptionsToEnable)
             if returnPinOptionsToDisable is not None:
                 p.disableOptions(returnPinOptionsToDisable)
-            if not p.isArray() and p.optionEnabled(PinOptions.ArraySupported):
-                p.structureType = StructureType.Multi
-            elif p.isArray():
+
+            if p.isArray():
                 p.structureType = StructureType.Array
 
         # iterate over function arguments and create pins according to data types
@@ -889,9 +884,7 @@ class NodeBase(INode):
                     outRef.enableOptions(pinOptionsToEnable)
                 if pinOptionsToDisable is not None:
                     outRef.disableOptions(pinOptionsToDisable)
-                if not outRef.isArray() and outRef.optionEnabled(PinOptions.ArraySupported):
-                    outRef.structureType = StructureType.Multi
-                elif outRef.isArray():
+                if outRef.isArray():
                     outRef.structureType = StructureType.Array
                 refs.append(outRef)
             else:
@@ -927,9 +920,8 @@ class NodeBase(INode):
                     inp.enableOptions(pinOptionsToEnable)
                 if pinOptionsToDisable is not None:
                     inp.disableOptions(pinOptionsToDisable)
-                if not inp.isArray() and inp.optionEnabled(PinOptions.ArraySupported):
-                    inp.structureType = StructureType.Multi
-                elif inp.isArray():
+
+                if inp.isArray():
                     inp.structureType = StructureType.Array
         raw_inst.autoAffectPins()
         return raw_inst

@@ -24,7 +24,7 @@ class makeDictElement(NodeBase):
         super(makeDictElement, self).__init__(name)
         self.bCacheEnabled = False
         self.key = self.createInputPin('key', 'AnyPin', structure=StructureType.Single, constraint="1", supportedPinDataTypes=getHashableDataTypes())
-        self.value = self.createInputPin('value', 'AnyPin', structure=StructureType.Multi, constraint="2")
+        self.value = self.createInputPin('value', 'AnyPin', structure=StructureType.Single, constraint="2")
         self.value.enableOptions(PinOptions.AllowAny)
         self.outArray = self.createOutputPin('out', 'AnyPin', defaultValue=DictElement(), structure=StructureType.Single, constraint="2")
         self.outArray.enableOptions(PinOptions.AllowAny | PinOptions.DictElementSupported)
@@ -39,7 +39,6 @@ class makeDictElement(NodeBase):
         helper.addInputDataType('AnyPin')
         helper.addOutputDataType('AnyPin')
         helper.addInputStruct(StructureType.Single)
-        helper.addInputStruct(StructureType.Multi)
         helper.addOutputStruct(StructureType.Single)
         return helper
 

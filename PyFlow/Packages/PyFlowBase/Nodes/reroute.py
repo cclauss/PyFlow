@@ -21,12 +21,12 @@ from PyFlow.Core.Common import *
 class reroute(NodeBase):
     def __init__(self, name):
         super(reroute, self).__init__(name)
-        self.input = self.createInputPin("in", 'AnyPin', structure=StructureType.Multi, constraint="1", structConstraint="1")
-        self.output = self.createOutputPin("out", 'AnyPin', structure=StructureType.Multi, constraint="1", structConstraint="1")
+        self.input = self.createInputPin("in", 'AnyPin', structure=StructureType.Single, constraint="1", structConstraint="1")
+        self.output = self.createOutputPin("out", 'AnyPin', structure=StructureType.Single, constraint="1", structConstraint="1")
         self.input.checkForErrors = False
         self.output.checkForErrors = False
-        self.input.enableOptions(PinOptions.AllowAny | PinOptions.DictElementSupported)
-        self.output.enableOptions(PinOptions.AllowAny | PinOptions.DictElementSupported)
+        self.input.enableOptions(SUPPORTS_EVERYTHING)
+        self.output.enableOptions(SUPPORTS_EVERYTHING)
         pinAffects(self.input, self.output)
         self.input.call = self.output.call
 
@@ -35,8 +35,13 @@ class reroute(NodeBase):
         helper = NodePinsSuggestionsHelper()
         helper.addInputDataType('AnyPin')
         helper.addOutputDataType('AnyPin')
-        helper.addInputStruct(StructureType.Multi)
-        helper.addOutputStruct(StructureType.Multi)
+
+        helper.addInputStruct(StructureType.Single)
+        helper.addInputStruct(StructureType.Array)
+        helper.addInputStruct(StructureType.Dict)
+        helper.addOutputStruct(StructureType.Single)
+        helper.addOutputStruct(StructureType.Array)
+        helper.addOutputStruct(StructureType.Dict)
         return helper
 
     @staticmethod
