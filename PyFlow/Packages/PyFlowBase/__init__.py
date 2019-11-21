@@ -65,7 +65,6 @@ from PyFlow.Packages.PyFlowBase.Nodes.address import address
 from PyFlow.Packages.PyFlowBase.Nodes.graphNodes import graphInputs, graphOutputs
 from PyFlow.Packages.PyFlowBase.Nodes.pythonNode import pythonNode
 from PyFlow.Packages.PyFlowBase.Nodes.compound import compound
-from PyFlow.Packages.PyFlowBase.Nodes.constant import constant
 from PyFlow.Packages.PyFlowBase.Nodes.convertTo import convertTo
 from PyFlow.Packages.PyFlowBase.Nodes.imageDisplay import imageDisplay
 
@@ -148,7 +147,6 @@ _NODES = {
     consoleOutput.__name__: consoleOutput,
     forEachLoop.__name__: forEachLoop,
     address.__name__: address,
-    constant.__name__: constant,
     tick.__name__: tick,
     convertTo.__name__: convertTo,
     dictKeys.__name__: dictKeys,

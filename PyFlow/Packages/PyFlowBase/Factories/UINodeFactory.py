@@ -30,7 +30,6 @@ from PyFlow.Packages.PyFlowBase.Nodes.floatRamp import floatRamp
 from PyFlow.Packages.PyFlowBase.Nodes.colorRamp import colorRamp
 
 from PyFlow.Packages.PyFlowBase.Nodes.compound import compound
-from PyFlow.Packages.PyFlowBase.Nodes.constant import constant
 from PyFlow.Packages.PyFlowBase.Nodes.convertTo import convertTo
 from PyFlow.Packages.PyFlowBase.Nodes.makeDict import makeDict
 from PyFlow.Packages.PyFlowBase.Nodes.makeAnyDict import makeAnyDict
@@ -57,7 +56,6 @@ from PyFlow.Packages.PyFlowBase.UI.UIFloatRamp import UIFloatRamp
 from PyFlow.Packages.PyFlowBase.UI.UIColorRamp import UIColorRamp
 
 from PyFlow.Packages.PyFlowBase.UI.UICompoundNode import UICompoundNode
-from PyFlow.Packages.PyFlowBase.UI.UIConstantNode import UIConstantNode
 from PyFlow.Packages.PyFlowBase.UI.UIConvertToNode import UIConvertToNode
 from PyFlow.Packages.PyFlowBase.UI.UIMakeDictNode import UIMakeDictNode
 from PyFlow.Packages.PyFlowBase.UI.UIForLoopBeginNode import UIForLoopBeginNode
@@ -89,8 +87,6 @@ def createUINode(raw_instance):
         return UICompoundNode(raw_instance)
     if isinstance(raw_instance, pythonNode):
         return UIPythonNode(raw_instance)
-    if isinstance(raw_instance, constant):
-        return UIConstantNode(raw_instance)
     if isinstance(raw_instance, convertTo):
         return UIConvertToNode(raw_instance)
     if isinstance(raw_instance, makeDict):
